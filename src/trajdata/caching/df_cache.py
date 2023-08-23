@@ -289,10 +289,17 @@ class DataFrameCache(SceneCache):
             # we know obs is "x,y,z,xd,yd,xdd,ydd,h"
             obs = obs - self._obs_frame
             # batch rotate vectors
-            obs[..., (0, 1, 3, 4, 5, 6)] = (
-                obs[..., (0, 1, 3, 4, 5, 6)].reshape(-1, 3, 2)
-                @ self._obs_rot_mat.T[None, :, :]
-            ).reshape(*batch_dims, 6)
+            # obs[..., (0, 1, 3, 4, 5, 6)] = (
+            #     obs[..., (0, 1, 3, 4, 5, 6)].reshape(-1, 3, 2)
+            #     @ self._obs_rot_mat.T[None, :, :]
+            # ).reshape(*batch_dims, 6)
+            
+            # TODO: not transforming velocity and acceleration for nuPlan
+            obs[..., (0, 1)] = (
+                obs[..., (0, 1)].reshape(-1, 1, 2)
+            @ self._obs_rot_mat.T[None, :, :]
+            ).reshape(*batch_dims, 2)
+
         obs = obs.view(RawStateArray)
         if self._obs_format is not None:
             obs = obs.as_format(self._obs_format)
