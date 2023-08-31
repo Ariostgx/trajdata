@@ -692,7 +692,13 @@ class DataFrameCache(SceneCache):
             tls_data_df: pd.DataFrame = pd.read_feather(
                 tls_data_path,
                 use_threads=False,
-            ).set_index(["lane_id", "scene_ts"])
+            )
+            # TODO (check how to set tls data correctly)
+            if 'scene_ts' in tls_data_df.columns:
+                tls_data_df = tls_data_df.set_index(["lane_id", "scene_ts"])
+            else:
+                tls_data_df = tls_data_df.set_index(["lane_id"])
+            
 
         # Return data as dict
         return {

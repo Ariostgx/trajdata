@@ -27,12 +27,12 @@ except ModuleNotFoundError:
     pass
 
 
-try:
-    from trajdata.dataset_specific.nuplan import NuplanDataset
-except ModuleNotFoundError:
+# try:
+from trajdata.dataset_specific.nuplan import NuplanDataset
+# except ModuleNotFoundError:
     # This can happen if the user did not install trajdata
     # with the "trajdata[nuplan]" option.
-    pass
+    # pass
 
 try:
     from trajdata.dataset_specific.waymo import WaymoDataset
