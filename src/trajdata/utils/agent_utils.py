@@ -4,6 +4,7 @@ from trajdata.caching import EnvCache, SceneCache
 from trajdata.data_structures import Scene, SceneMetadata
 from trajdata.dataset_specific import RawDataset
 from trajdata.utils import scene_utils
+import time
 
 
 def get_agent_data(
@@ -14,6 +15,9 @@ def get_agent_data(
     cache_class: Type[SceneCache],
     desired_dt: Optional[float] = None,
 ) -> Scene:
+    scene_name = scene_info.name
+    scene_start_time = time.time()
+
     if not rebuild_cache and env_cache.scene_is_cached(
         scene_info.env_name, scene_info.name, scene_info.dt
     ):
@@ -49,10 +53,10 @@ def get_agent_data(
     )
     if agent_list is None and agent_presence is None:
         raise ValueError(f"Scene {scene_info.name} contains no agents!")
-
     scene.update_agent_info(agent_list, agent_presence)
     env_cache.save_scene(scene)
 
+    enforce_start_time = time.time()
     if scene_utils.enforce_desired_dt(scene, desired_dt, dry_run=True):
         # In case the user specified a desired_dt that's different from the scene's
         # native dt, we will perform the interpolation here and cache the result for
@@ -65,5 +69,11 @@ def get_agent_data(
         # Interpolating the agent data and caching it.
         scene_cache: SceneCache = cache_class(env_cache.path, scene)
         scene_cache.write_cache_to_disk()
+
+    enforce_end_time = time.time()
+    print(f"Enforcing desired dt took {enforce_end_time - enforce_start_time} seconds.")
+
+    scene_end_time = time.time()
+    print(f"Scene in total {scene_name} took {scene_end_time - scene_start_time} seconds.")
 
     return scene

@@ -24,6 +24,8 @@ from trajdata.dataset_specific.scene_records import NuPlanSceneRecord
 from trajdata.maps.vec_map import VectorMap
 from trajdata.utils import arr_utils
 
+import time
+
 
 class NuplanDataset(RawDataset):
     def compute_metadata(self, env_name: str, data_dir: str) -> EnvMetadata:
@@ -216,6 +218,8 @@ class NuplanDataset(RawDataset):
     def get_agent_info(
         self, scene: Scene, cache_path: Path, cache_class: Type[SceneCache]
     ) -> Tuple[List[AgentMetadata], List[List[AgentMetadata]]]:
+        start_loading = time.time()
+
         # instantiate VectorMap from map_api if necessary
         self.dataset_obj.open_db(scene.name.split("=")[0] + ".db")
 
@@ -253,7 +257,11 @@ class NuplanDataset(RawDataset):
         tls_df: pd.DataFrame = self.dataset_obj.get_traffic_light_status(lpc_tokens)
 
         self.dataset_obj.close_db()
+        end_loading = time.time()
 
+        print(f"Loading {cache_path}: {end_loading - start_loading:.2f} seconds")
+
+        processing_start = time.time()
         agents_df["scene_ts"] = agents_df["lidar_pc_token"].map(
             {lpc_token: scene_ts for scene_ts, lpc_token in enumerate(lpc_tokens)}
         )
@@ -346,6 +354,11 @@ class NuplanDataset(RawDataset):
         overall_agents_df = pd.concat([ego_df, agents_df.reset_index()]).set_index(
             ["agent_id", "scene_ts"]
         )
+
+        processing_end = time.time()
+        print(f"Processing {cache_path}: {processing_end - processing_start:.2f} seconds")
+
+        saving_start = time.time()
         cache_class.save_agent_data(overall_agents_df, cache_path, scene)
 
         # similar process to clean up and traffic light data
@@ -357,7 +370,8 @@ class NuplanDataset(RawDataset):
         )
 
         cache_class.save_traffic_light_data(tls_df, cache_path, scene)
-
+        saving_end = time.time()
+        print(f"Saving {cache_path}: {saving_end - saving_start:.2f} seconds")
         return agent_list, agent_presence
 
     def cache_map(
