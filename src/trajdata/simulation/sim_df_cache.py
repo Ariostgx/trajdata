@@ -86,6 +86,9 @@ class SimulationDataFrameCache(DataFrameCache, SimulationCache):
         )
 
         new_xyzh: StateArray
+
+        # support using non-reactive background agents
+
         for idx, (agent, new_xyzh) in enumerate(xyzh_dict.items()):
             prev_state: StateArray = prev_states[idx]
 

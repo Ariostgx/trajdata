@@ -259,7 +259,7 @@ class NuplanDataset(RawDataset):
         self.dataset_obj.close_db()
         end_loading = time.time()
 
-        print(f"Loading {cache_path}: {end_loading - start_loading:.2f} seconds")
+        print(f"Loading {scene.name}: {end_loading - start_loading:.2f} seconds")
 
         processing_start = time.time()
         agents_df["scene_ts"] = agents_df["lidar_pc_token"].map(
@@ -356,7 +356,7 @@ class NuplanDataset(RawDataset):
         )
 
         processing_end = time.time()
-        print(f"Processing {cache_path}: {processing_end - processing_start:.2f} seconds")
+        print(f"Processing {scene.name}: {processing_end - processing_start:.2f} seconds")
 
         saving_start = time.time()
         cache_class.save_agent_data(overall_agents_df, cache_path, scene)
@@ -371,7 +371,7 @@ class NuplanDataset(RawDataset):
 
         cache_class.save_traffic_light_data(tls_df, cache_path, scene)
         saving_end = time.time()
-        print(f"Saving {cache_path}: {saving_end - saving_start:.2f} seconds")
+        print(f"Saving {scene.name}: {saving_end - saving_start:.2f} seconds")
         return agent_list, agent_presence
 
     def cache_map(
