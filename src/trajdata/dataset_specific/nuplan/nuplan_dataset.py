@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type
 
+import os
 import numpy as np
 import pandas as pd
 from nuplan.common.maps.nuplan_map import map_factory
@@ -73,14 +74,19 @@ class NuplanDataset(RawDataset):
 
     def load_dataset_obj(self, verbose: bool = False) -> None:
         if verbose:
-            print(f"Loading {self.name} dataset...", flush=True)
+            print(f"Process {os.getpid()}: Loading {self.name} dataset...", flush=True)
 
         if self.name == "nuplan_mini":
             subfolder = "mini"
         elif self.name.startswith("nuplan"):
             subfolder = "trainval"
 
+        start = time.time()
         self.dataset_obj = nuplan_utils.NuPlanObject(self.metadata.data_dir, subfolder)
+        end = time.time()
+
+        if verbose:
+            print(f"Process {os.getpid()}: Loaded {self.name} dataset objects in {end - start:.2f} seconds", flush=True)
 
     def _get_matching_scenes_from_obj(
         self,
@@ -259,7 +265,7 @@ class NuplanDataset(RawDataset):
         self.dataset_obj.close_db()
         end_loading = time.time()
 
-        print(f"Loading {scene.name}: {end_loading - start_loading:.2f} seconds")
+        print(f"Process {os.getpid()}: Loading {scene.name}: {end_loading - start_loading:.2f} seconds", flush=True)
 
         processing_start = time.time()
         agents_df["scene_ts"] = agents_df["lidar_pc_token"].map(
@@ -356,7 +362,7 @@ class NuplanDataset(RawDataset):
         )
 
         processing_end = time.time()
-        print(f"Processing {scene.name}: {processing_end - processing_start:.2f} seconds")
+        print(f"Process {os.getpid()}: Processing {scene.name}: {processing_end - processing_start:.2f} seconds", flush=True)
 
         saving_start = time.time()
         cache_class.save_agent_data(overall_agents_df, cache_path, scene)
@@ -371,7 +377,7 @@ class NuplanDataset(RawDataset):
 
         cache_class.save_traffic_light_data(tls_df, cache_path, scene)
         saving_end = time.time()
-        print(f"Saving {scene.name}: {saving_end - saving_start:.2f} seconds")
+        print(f"Process {os.getpid()}: Saving {scene.name}: {saving_end - saving_start:.2f} seconds", flush=True)
         return agent_list, agent_presence
 
     def cache_map(
