@@ -100,7 +100,8 @@ class ParallelDatasetPreprocessor(Dataset):
             self.cache_class,
             self.desired_dt,
         )
-        raw_dataset.del_dataset_obj()
+        if 'nuplan' not in env_name:
+            raw_dataset.del_dataset_obj()
 
         scene_end_time = time.time()
         print(f"Process {os.getpid()}: {scene_name} finish all took {scene_end_time - scene_start_time} seconds.")
