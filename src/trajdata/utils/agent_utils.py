@@ -73,7 +73,6 @@ def get_agent_data(
     enforce_end_time = time.time()
     print(f"Enforcing desired dt took {enforce_end_time - enforce_start_time} seconds.")
 
-    scene_end_time = time.time()
-    print(f"Scene in total {scene_name} took {scene_end_time - scene_start_time} seconds.")
+
 
     return scene

@@ -7,6 +7,7 @@ import pandas as pd
 from nuplan.common.maps.nuplan_map import map_factory
 from nuplan.common.maps.nuplan_map.nuplan_map import NuPlanMap
 from tqdm import tqdm
+import dill
 
 from trajdata.caching import EnvCache, SceneCache
 from trajdata.data_structures.agent import (
@@ -72,7 +73,7 @@ class NuplanDataset(RawDataset):
             map_locations=nuplan_utils.NUPLAN_LOCATIONS,
         )
 
-    def load_dataset_obj(self, verbose: bool = False) -> None:
+    def load_dataset_obj(self, verbose: bool = False, scenes = None, cache_path = None) -> None:
         if verbose:
             print(f"Process {os.getpid()}: Loading {self.name} dataset...", flush=True)
 
@@ -80,9 +81,29 @@ class NuplanDataset(RawDataset):
             subfolder = "mini"
         elif self.name.startswith("nuplan"):
             subfolder = "trainval"
+        
+        if scenes is None:
+            if cache_path is not None:
+                scene_list_path = cache_path / self.name / "scenes_list.dill"
+                print(f'Loading from cache {scene_list_path}', flush=True)
+                if scene_list_path.exists():
+                    scenes = []
+                    with open(scene_list_path, 'rb') as f:
+                        ori_scene_list = dill.load(f)
+                    for scene in ori_scene_list:
+                        scenes.append(
+                            {
+                                "name": scene.name,
+                                "location": scene.location,
+                                "num_timesteps": scene.length,
+                            }
+                        )
+            else:
+                print('Loading by reading from the dataset folders', flush=True)
+                scenes = None
 
         start = time.time()
-        self.dataset_obj = nuplan_utils.NuPlanObject(self.metadata.data_dir, subfolder)
+        self.dataset_obj = nuplan_utils.NuPlanObject(self.metadata.data_dir, subfolder, scenes)
         end = time.time()
 
         if verbose:

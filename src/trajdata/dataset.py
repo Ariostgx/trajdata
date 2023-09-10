@@ -290,7 +290,10 @@ class UnifiedDataset(Dataset):
                 ):
                     # Loading dataset objects in case we don't have
                     # the desired data already cached.
-                    env.load_dataset_obj(verbose=self.verbose)
+                    if 'nuplan' in env.name:
+                         env.load_dataset_obj(verbose=self.verbose, cache_path=self.cache_path)
+                    else:
+                        env.load_dataset_obj(verbose=self.verbose)
 
                     if (
                         rebuild_maps
@@ -816,8 +819,17 @@ class UnifiedDataset(Dataset):
         # this memory allows the parallel processing below to run very fast.
         # The dataset objects for any envs used below will be loaded in each
         # process.
+        env_dict = {}
         for env in self.envs:
-            env.del_dataset_obj()
+            if 'nuplan' not in env.name:
+                env.del_dataset_obj()
+            env_dict[env.name] = env
+        # for env in self.envs:
+        #     if 'nuplan' in env.name and env.dataset_obj is not None:
+        #         env_scences[env.name] = env.dataset_obj.scenes
+        #     else:
+        #         env_scences[env.name] = None
+        #         env.del_dataset_obj()
 
         # Scenes for which it's faster to process them in parallel
         # Note this really only applies to scenes whose raw datasets
@@ -843,6 +855,8 @@ class UnifiedDataset(Dataset):
                 self.desired_dt,
                 self.cache_class,
                 self.rebuild_cache,
+                env_dict
+                # env_scences
             )
 
             # Done with this list. Cutting memory usage because

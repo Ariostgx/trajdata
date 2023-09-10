@@ -1,3 +1,5 @@
+import os
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type
 
@@ -22,6 +24,7 @@ class ParallelDatasetPreprocessor(Dataset):
         desired_dt: Optional[float],
         cache_class: Type[SceneCache],
         rebuild_cache: bool,
+        env_dict
     ) -> None:
         self.env_cache_path = np.array(env_cache_path).astype(np.string_)
         self.desired_dt = desired_dt
@@ -48,31 +51,47 @@ class ParallelDatasetPreprocessor(Dataset):
         self.data_dir_arr = np.array(list(envs_dir_dict.values())).astype(np.string_)
 
         self.data_len: int = len(scene_info_list)
+        self.env_dict = env_dict
 
     def __len__(self) -> int:
         return self.data_len
 
     def __getitem__(self, idx: int) -> str:
+
         env_cache_path: Path = Path(str(self.env_cache_path, encoding="utf-8"))
         env_cache: EnvCache = EnvCache(env_cache_path)
 
         env_idx: int = self.env_name_idxs[idx]
         scene_idx: int = self.scene_name_idxs[idx]
 
+        scene_start_time = time.time()
         env_name: str = str(self.env_names_arr[env_idx], encoding="utf-8")
-        raw_dataset = env_utils.get_raw_dataset(
-            env_name, str(self.data_dir_arr[env_idx], encoding="utf-8")
-        )
 
+        if 'nuplan' not in env_name:
+            raw_dataset = env_utils.get_raw_dataset(
+                env_name, str(self.data_dir_arr[env_idx], encoding="utf-8")
+            )
+        else:
+            raw_dataset = self.env_dict[env_name]
+            
         scene_name: str = str(self.scene_names_arr[scene_idx], encoding="utf-8")
+
+        scene_prepare_time = time.time()
+        print(f"Process {os.getpid()}: {scene_name} prepare took {scene_prepare_time - scene_start_time} seconds.")
+
 
         scene_info = SceneMetadata(
             env_name, scene_name, raw_dataset.metadata.dt, self.scene_idxs[idx]
         )
 
+
         # Leaving verbose False here so that we don't spam
         # stdout with loading messages.
-        raw_dataset.load_dataset_obj(verbose=False)
+        # if 'nuplan' in env_name:
+        #     raw_dataset.load_dataset_obj(verbose=True, scenes=self.env_scences[env_name])
+        if 'nuplan' not in env_name:
+            raw_dataset.load_dataset_obj(verbose=False)
+
         scene: Scene = agent_utils.get_agent_data(
             scene_info,
             raw_dataset,
@@ -82,6 +101,9 @@ class ParallelDatasetPreprocessor(Dataset):
             self.desired_dt,
         )
         raw_dataset.del_dataset_obj()
+
+        scene_end_time = time.time()
+        print(f"Process {os.getpid()}: {scene_name} finish all took {scene_end_time - scene_start_time} seconds.")
 
         if scene is None:
             # This provides an escape hatch in case there's a reason we

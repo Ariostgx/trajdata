@@ -10,6 +10,7 @@ import pandas as pd
 import yaml
 from nuplan.common.maps.nuplan_map.nuplan_map import NuPlanMap
 from tqdm import tqdm
+import dill
 
 from trajdata.data_structures.agent import AgentType
 from trajdata.data_structures.scene_metadata import Scene
@@ -50,13 +51,16 @@ NUPLAN_TRAFFIC_STATUS_DICT: Final[Dict[str, TrafficLightStatus]] = {
 
 
 class NuPlanObject:
-    def __init__(self, dataset_path: Path, subfolder: str) -> None:
+    def __init__(self, dataset_path: Path, subfolder: str, scenes) -> None:
         self.base_path: Path = dataset_path / subfolder
 
         self.connection: sqlite3.Connection = None
         self.cursor: sqlite3.Cursor = None
 
-        self.scenes: List[Dict[str, str]] = self._load_scenes()
+        if scenes is None:
+            self.scenes: List[Dict[str, str]] = self._load_scenes()
+        else:
+            self.scenes: List[Dict[str, str]] = scenes
 
     def open_db(self, db_filename: str) -> None:
         self.connection = sqlite3.connect(str(self.base_path / db_filename))
@@ -103,7 +107,6 @@ class NuPlanObject:
         LEFT JOIN log ON sc.log_token = log.token
         """
         scenes: List[Dict[str, str]] = []
-
         for log_filename in glob.glob(str(self.base_path / "*.db")):
             self.open_db(log_filename)
 
