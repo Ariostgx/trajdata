@@ -82,25 +82,26 @@ class NuplanDataset(RawDataset):
         elif self.name.startswith("nuplan"):
             subfolder = "trainval"
         
-        if scenes is None:
-            if cache_path is not None:
-                scene_list_path = cache_path / self.name / "scenes_list.dill"
-                print(f'Loading from cache {scene_list_path}', flush=True)
-                if scene_list_path.exists():
-                    scenes = []
-                    with open(scene_list_path, 'rb') as f:
-                        ori_scene_list = dill.load(f)
-                    for scene in ori_scene_list:
-                        scenes.append(
-                            {
-                                "name": scene.name,
-                                "location": scene.location,
-                                "num_timesteps": scene.length,
-                            }
-                        )
-            else:
-                print('Loading by reading from the dataset folders', flush=True)
-                scenes = None
+        if scenes is None and cache_path is not None:
+            scene_list_path = cache_path / self.name / "scenes_list.dill"
+            if scene_list_path.exists():
+                scenes = []
+                with open(scene_list_path, 'rb') as f:
+                    ori_scene_list = dill.load(f)
+                for scene in ori_scene_list:
+                    scenes.append(
+                        {
+                            "name": scene.name,
+                            "location": scene.location,
+                            "num_timesteps": scene.length,
+                        }
+                    )
+
+        if scenes is None or len(scenes) == 0:
+            print('Loading by reading from the dataset folders', flush=True)
+            scenes = None
+        else:
+            print(f'Loading from cache {scene_list_path}', flush=True)
 
         start = time.time()
         self.dataset_obj = nuplan_utils.NuPlanObject(self.metadata.data_dir, subfolder, scenes)
