@@ -97,10 +97,11 @@ class SimulationScene:
         self,
         new_xyzh_dict: Dict[str, StateArray],
         return_obs=True,
+        use_nr_background=False,
     ) -> Union[AgentBatch, Dict[str, Any]]:
         self.scene_ts += 1
 
-        self.cache.append_state(new_xyzh_dict)
+        self.cache.append_state(new_xyzh_dict, use_nr_background)
 
         if not self.freeze_agents:
             agents_present: List[AgentMetadata] = self.scene.agent_presence[

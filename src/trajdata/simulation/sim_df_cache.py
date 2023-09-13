@@ -77,7 +77,7 @@ class SimulationDataFrameCache(DataFrameCache, SimulationCache):
 
         return super().get_agents_future(scene_ts, agents, future_sec)
 
-    def append_state(self, xyzh_dict: Dict[str, StateArray]) -> None:
+    def append_state(self, xyzh_dict: Dict[str, StateArray], use_nr_background=False) -> None:
         self.scene_ts += 1
 
         sim_dict: Dict[str, List[Union[str, float, int]]] = defaultdict(list)
@@ -125,6 +125,27 @@ class SimulationDataFrameCache(DataFrameCache, SimulationCache):
                 sim_dict["height"].append(
                     self.get_value(agent, self.scene_ts - 1, "height")
                 )
+
+        # add non-reactive background agents with ground-truth data
+        if use_nr_background and self.scene_ts in self.original_scene_df.index.get_level_values(1):
+            gt_frame = self.original_scene_df.xs(self.scene_ts, level=1)
+            # for agent in gt_frame.index.get_level_values('agent_id'):
+            all_agent_ids = self.persistent_data_df.xs(self.scene_ts-1, level=1).index.get_level_values('agent_id')
+            for agent in all_agent_ids:
+                if agent not in xyzh_dict.keys():
+                    # use ground-truth data for the current timestep if available
+                    if agent in gt_frame.index.get_level_values('agent_id'):
+                        agent_data = gt_frame.loc[agent]
+                    # otherwise use the previous timestep's data
+                    else:
+                        agent_data = self.persistent_data_df.xs(self.scene_ts-1, level=1).loc[agent]
+                    sim_dict["agent_id"].append(agent)
+                    sim_dict["scene_ts"].append(self.scene_ts)
+                    for attr in ['x', 'y', 'vx', 'vy', 'ax', 'ay', 'heading']:
+                        sim_dict[attr].append(agent_data[attr])
+                    if self.extent_cols:
+                        for attr in ['length', 'width', 'height']:
+                            sim_dict[attr].append(self.get_value(agent, self.scene_ts - 1, attr))
 
         sim_step_df = pd.DataFrame(sim_dict)
         sim_step_df.set_index(["agent_id", "scene_ts"], inplace=True)
