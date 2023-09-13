@@ -89,9 +89,9 @@ class SimulationScene:
                 if isinstance(batch_aug, BatchAugmentation)
             ]
 
-    def reset(self) -> Union[AgentBatch, Dict[str, Any]]:
+    def reset(self, agent_names=None) -> Union[AgentBatch, Dict[str, Any]]:
         self.scene_ts: int = self.init_scene_ts
-        return self.get_obs()
+        return self.get_obs(agent_names=agent_names)
 
     def step(
         self,
@@ -119,14 +119,14 @@ class SimulationScene:
             return self.get_obs()
 
     def get_obs(
-        self, collate: bool = True, get_map: bool = True, agent_names = []
+        self, collate: bool = True, get_map: bool = True, agent_names = None
     ) -> Union[AgentBatch, Dict[str, Any]]:
         agent_data_list: List[AgentBatchElement] = list()
         self.cache.set_obs_format(self.dataset.obs_format)
 
         for agent in self.agents:
             # only load interested agents
-            if len(agent_names) > 0 and agent.name not in agent_names:
+            if agent_names is not None and agent.name not in agent_names:
                 continue
             
             scene_time_agent = SceneTimeAgent(
