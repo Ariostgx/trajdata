@@ -456,3 +456,5 @@ def plot_scene_batch(
 
     if close:
         plt.close()
+
+    return ax

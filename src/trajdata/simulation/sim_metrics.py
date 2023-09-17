@@ -1,10 +1,11 @@
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 
 from shapely import affinity
 from shapely.geometry import Polygon
+from pandas.core.series import Series
 
 class SimMetric:
     def __init__(self, name: str) -> None:
@@ -34,7 +35,7 @@ class FDE(SimMetric):
         return err_df.groupby("agent_id")["error"].last().to_dict()
 
 class CrashDetect(SimMetric):
-  def __init__(self, tgt_agent_ids, agent_extends, iou_threshold=0.1, mode='sim') -> None:
+  def __init__(self, tgt_agent_ids: List[str], agent_extends: Dict[str, List[float]], iou_threshold=0.1, mode='sim') -> None:
     super().__init__("crach_detect")
     
     self.tgt_agent_ids = tgt_agent_ids
@@ -42,7 +43,7 @@ class CrashDetect(SimMetric):
     self.iou_threshold = iou_threshold
     self.mode = mode
 
-  def _get_box_polygon(self, agent, extents):
+  def _get_box_polygon(self, agent: Series, extents: List[float]):
     box_points = np.array([[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]])
     box_points[:, 0] = box_points[:, 0] * extents[1]
     box_points[:, 1] = box_points[:, 1] * extents[0]
@@ -53,7 +54,7 @@ class CrashDetect(SimMetric):
     box = affinity.translate(box, agent['x'], agent['y'])
     return box
 
-  def _poly_iou_check(self, poly1, poly2, iou_threshold):
+  def _poly_iou_check(self, poly1: Polygon, poly2: Polygon, iou_threshold: float):
     if not poly1.intersects(poly2):
       return False
 
@@ -63,7 +64,7 @@ class CrashDetect(SimMetric):
 
     return iou > iou_threshold
 
-  def __call__(self, gt_df: pd.DataFrame, sim_df: pd.DataFrame) -> Dict[str, bool]:
+  def __call__(self, gt_df: pd.DataFrame, sim_df: pd.DataFrame):
     data = sim_df if self.mode == 'sim' else gt_df
 
     all_scene_ts = data.index.get_level_values('scene_ts').unique()
@@ -109,6 +110,6 @@ class CrashDetect(SimMetric):
     
     crash_detect = {}
     for agent_id in self.tgt_agent_ids:
-      crash_detect[agent_id] = crash_logs[agent_id].count(1) > 0
+      crash_detect[agent_id] = int(crash_logs[agent_id].count(1) > 0)
 
     return crash_detect
