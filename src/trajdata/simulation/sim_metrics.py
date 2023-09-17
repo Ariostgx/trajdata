@@ -5,7 +5,6 @@ import pandas as pd
 
 from shapely import affinity
 from shapely.geometry import Polygon
-from pandas.core.series import Series
 
 class SimMetric:
     def __init__(self, name: str) -> None:
@@ -43,7 +42,7 @@ class CrashDetect(SimMetric):
     self.iou_threshold = iou_threshold
     self.mode = mode
 
-  def _get_box_polygon(self, agent: Series, extents: List[float]):
+  def _get_box_polygon(self, agent: pd.Series, extents: List[float]):
     box_points = np.array([[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]])
     box_points[:, 0] = box_points[:, 0] * extents[1]
     box_points[:, 1] = box_points[:, 1] * extents[0]
