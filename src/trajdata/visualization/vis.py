@@ -6,6 +6,7 @@ import numpy as np
 import seaborn as sns
 import torch
 from matplotlib.axes import Axes
+import matplotlib.colors as mcolors
 from matplotlib.patches import FancyBboxPatch, Polygon
 from torch import Tensor
 
@@ -376,6 +377,8 @@ def plot_scene_batch(
     if ax is None:
         _, ax = plt.subplots()
 
+    colors = list(mcolors.TABLEAU_COLORS)
+
     num_agents: int = batch.num_agents[batch_idx].item()
 
     agent_from_world_tf: Tensor = batch.centered_agent_from_world_tf[batch_idx].cpu()
@@ -402,10 +405,13 @@ def plot_scene_batch(
     agent_fut = batch.agent_fut[batch_idx]
 
     for agent_id in range(num_agents):
+        color = colors[agent_id % len(colors)]
+
         ax.plot(
             agent_hist.get_attr("x")[agent_id],
             agent_hist.get_attr("y")[agent_id],
-            c="orange",
+            # c="orange",
+            c="olive",
             ls="--",
             label="Agent History" if agent_id == 0 else None,
         )
@@ -415,7 +421,8 @@ def plot_scene_batch(
             agent_hist[agent_id, -1],
             agent_extent[agent_id],
             base_frame_from_agent_tf,
-            facecolor="olive",
+            # facecolor=color,
+            facecolor='olive',
             edgecolor="k",
             alpha=0.7,
             label="Agent Current" if agent_id == 0 else None,
@@ -423,7 +430,7 @@ def plot_scene_batch(
         ax.plot(
             agent_fut.get_attr("x")[agent_id],
             agent_fut.get_attr("y")[agent_id],
-            c="violet",
+            c="darkgreen",
             label="Agent Future" if agent_id == 0 else None,
         )
 
