@@ -42,6 +42,7 @@ class AgentBatch:
     vector_maps: Optional[List[VectorMap]]
     rasters_from_world_tf: Optional[Tensor]
     agents_from_world_tf: Tensor
+    neigh_names: Optional[List[str]]
     scene_ids: Optional[List]
     history_pad_dir: PadDirection
     extras: Dict[str, Tensor]
@@ -63,6 +64,7 @@ class AgentBatch:
             "scene_ids",
             "history_pad_dir",
             "extras",
+            "neigh_names"
         }
         for val in vars(self).keys():
             tensor_val = getattr(self, val)
@@ -148,6 +150,7 @@ class AgentBatch:
             if self.rasters_from_world_tf is not None
             else None,
             agents_from_world_tf=_filter(self.agents_from_world_tf),
+            neigh_names=_filter_tensor_or_list(self.neigh_names),
             scene_ids=_filter_tensor_or_list(self.scene_ids),
             history_pad_dir=self.history_pad_dir,
             extras={

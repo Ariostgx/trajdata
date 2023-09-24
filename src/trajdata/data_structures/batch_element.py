@@ -120,6 +120,7 @@ class AgentBatchElement:
         self.neighbor_meta_dicts: Dict = [
             get_agent_meta_dict(self.cache, agent) for agent in nearby_agents
         ]
+        self.neigh_names = [agent.name for agent in nearby_agents]
 
         ### ROBOT DATA ###
         self.robot_future_np: Optional[StateArray] = None

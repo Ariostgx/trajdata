@@ -679,6 +679,7 @@ def agent_collate_fn(
         dtype=torch.float,
     )
 
+    neigh_names = [batch_elem.neigh_names for batch_elem in batch_elems]
     scene_ids = [batch_elem.scene_id for batch_elem in batch_elems]
 
     extras: Dict[str, Tensor] = {}
@@ -716,6 +717,7 @@ def agent_collate_fn(
         vector_maps=vector_maps,
         rasters_from_world_tf=rasters_from_world_tf,
         agents_from_world_tf=agents_from_world_tf,
+        neigh_names=neigh_names,
         scene_ids=scene_ids,
         history_pad_dir=history_pad_dir,
         extras=extras,

@@ -221,6 +221,9 @@ def plot_agent_batch(
     legend: bool = True,
     show: bool = True,
     close: bool = True,
+    with_history: bool = True,
+    with_future: bool = True,
+    controlled_names: Optional[str] = None,
 ) -> None:
     if ax is None:
         _, ax = plt.subplots()
@@ -258,23 +261,24 @@ def plot_agent_batch(
     else:
         color = palette[3]
 
-    draw_history(
-        ax,
-        agent_type,
-        agent_hist[:-1],
-        agent_extent,
-        base_frame_from_agent_tf,
-        facecolor=color,
-        edgecolor=None,
-        linewidth=0,
-    )
-    ax.plot(
-        agent_hist.get_attr("x"),
-        agent_hist.get_attr("y"),
-        linestyle="--",
-        color=color,
-        label="Agent History",
-    )
+    if with_history:
+        draw_history(
+            ax,
+            agent_type,
+            agent_hist[:-1],
+            agent_extent,
+            base_frame_from_agent_tf,
+            facecolor=color,
+            edgecolor=None,
+            linewidth=0,
+        )
+        ax.plot(
+            agent_hist.get_attr("x"),
+            agent_hist.get_attr("y"),
+            linestyle="--",
+            color=color,
+            label="Agent History",
+        )
     draw_agent(
         ax,
         agent_type,
@@ -285,13 +289,15 @@ def plot_agent_batch(
         edgecolor="k",
         label="Agent Current",
     )
-    ax.plot(
-        agent_fut.get_attr("x"),
-        agent_fut.get_attr("y"),
-        linestyle="-",
-        color=color,
-        label="Agent Future",
-    )
+
+    if with_future:
+        ax.plot(
+            agent_fut.get_attr("x"),
+            agent_fut.get_attr("y"),
+            linestyle="-",
+            color=color,
+            label="Agent Future",
+        )
 
     num_neigh = batch.num_neigh[batch_idx]
     if num_neigh > 0:
@@ -307,27 +313,38 @@ def plot_agent_batch(
             if torch.isnan(neighbor_hist[n, -1, :]).any():
                 # this neighbor does not exist at the current timestep
                 continue
-            ax.plot(
-                neighbor_hist.get_attr("x")[n, :],
-                neighbor_hist.get_attr("y")[n, :],
-                c="olive",
-                ls="--",
-            )
+            if with_history:
+                ax.plot(
+                    neighbor_hist.get_attr("x")[n, :],
+                    neighbor_hist.get_attr("y")[n, :],
+                    c="olive",
+                    ls="--",
+                )
+            
+            if controlled_names is not None and batch.neigh_names[batch_idx][n] in controlled_names:
+                color = palette[0]
+                alpha = 1.0
+            else:
+                color = 'olive'
+                alpha = 0.7
+
             draw_agent(
                 ax,
                 neighbor_type[n],
                 neighbor_hist[n, -1],
                 neighbor_extent[n, :],
                 base_frame_from_agent_tf,
-                facecolor="olive",
+                facecolor=color,
                 edgecolor="k",
-                alpha=0.7,
+                alpha=alpha,
             )
-            ax.plot(
-                neighbor_fut.get_attr("x")[n, :],
-                neighbor_fut.get_attr("y")[n, :],
-                c="darkgreen",
-            )
+            
+            if with_future:
+                ax.plot(
+                    neighbor_fut.get_attr("x")[n, :],
+                    neighbor_fut.get_attr("y")[n, :],
+                    c="darkgreen",
+                )
 
     if batch.robot_fut is not None and batch.robot_fut.shape[1] > 0:
         ax.plot(
@@ -350,9 +367,13 @@ def plot_agent_batch(
     ax.grid(False)
     ax.set_aspect("equal", adjustable="box")
 
+    ax.set_xlim(-25, 85)
+    ax.set_ylim(-55, 55)
+    
     # Doing this because the imshow above makes the map origin at the top.
     # TODO(pkarkus) we should just modify imshow not to change the origin instead.
     ax.invert_yaxis()
+
 
     if legend:
         ax.legend(loc="best", frameon=True)
@@ -364,7 +385,6 @@ def plot_agent_batch(
         plt.close()
 
     return ax
-
 
 def plot_scene_batch(
     batch: SceneBatch,
