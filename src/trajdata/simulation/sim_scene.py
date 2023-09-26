@@ -61,11 +61,11 @@ class SimulationScene:
                 )
             )
 
-        if self.freeze_agents:
-            self.scene.agent_presence = self.scene.agent_presence[
-                : self.init_scene_ts + 1
-            ]
-            self.scene.agents = self.agents
+        # if self.freeze_agents:
+        #     self.scene.agent_presence = self.scene.agent_presence[
+        #         : self.init_scene_ts + 1
+        #     ]
+        #     self.scene.agents = self.agents
 
         # Note this order of operations is important, we first instantiate
         # the cache with the copied scene_info + modified agents list.
@@ -98,22 +98,30 @@ class SimulationScene:
         new_xyzh_dict: Dict[str, StateArray],
         return_obs=True,
         use_nr_background=False,
+        control_agent_info=None,
     ) -> Union[AgentBatch, Dict[str, Any]]:
         self.scene_ts += 1
 
         self.cache.append_state(new_xyzh_dict, use_nr_background)
 
-        if not self.freeze_agents:
-            agents_present: List[AgentMetadata] = self.scene.agent_presence[
-                self.scene_ts
-            ]
-            self.agents: List[AgentMetadata] = filtering.agent_types(
-                agents_present, self.dataset.no_types, self.dataset.only_types
-            )
+        # if not self.freeze_agents:
+        agents_present: List[AgentMetadata] = self.scene.agent_presence[
+            self.scene_ts
+        ]
 
-            self.scene.agent_presence[self.scene_ts] = self.agents
-        else:
-            self.scene.agent_presence.append(self.agents)
+        # always keep track of the updated agents in the scene
+        if use_nr_background:
+            for agent in control_agent_info:
+                if agent.name not in [agent.name for agent in agents_present]:
+                    agents_present.append(agent)
+
+        self.agents: List[AgentMetadata] = filtering.agent_types(
+            agents_present, self.dataset.no_types, self.dataset.only_types
+        )
+
+        self.scene.agent_presence[self.scene_ts] = self.agents
+        # else:
+            # self.scene.agent_presence.append(self.agents)
 
         if return_obs:
             return self.get_obs()

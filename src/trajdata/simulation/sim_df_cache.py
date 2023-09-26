@@ -129,16 +129,11 @@ class SimulationDataFrameCache(DataFrameCache, SimulationCache):
         # add non-reactive background agents with ground-truth data
         if use_nr_background and self.scene_ts in self.original_scene_df.index.get_level_values(1):
             gt_frame = self.original_scene_df.xs(self.scene_ts, level=1)
-            # for agent in gt_frame.index.get_level_values('agent_id'):
-            all_agent_ids = self.persistent_data_df.xs(self.scene_ts-1, level=1).index.get_level_values('agent_id')
+            all_agent_ids = gt_frame.index.get_level_values('agent_id')
             for agent in all_agent_ids:
                 if agent not in xyzh_dict.keys():
                     # use ground-truth data for the current timestep if available
-                    if agent in gt_frame.index.get_level_values('agent_id'):
-                        agent_data = gt_frame.loc[agent]
-                    # otherwise use the previous timestep's data
-                    else:
-                        agent_data = self.persistent_data_df.xs(self.scene_ts-1, level=1).loc[agent]
+                    agent_data = gt_frame.loc[agent]
                     sim_dict["agent_id"].append(agent)
                     sim_dict["scene_ts"].append(self.scene_ts)
                     for attr in ['x', 'y', 'vx', 'vy', 'ax', 'ay', 'heading']:
@@ -146,6 +141,7 @@ class SimulationDataFrameCache(DataFrameCache, SimulationCache):
                     if self.extent_cols:
                         for attr in ['length', 'width', 'height']:
                             sim_dict[attr].append(self.get_value(agent, self.scene_ts - 1, attr))
+                    # otherwise drop this agent
 
         sim_step_df = pd.DataFrame(sim_dict)
         sim_step_df.set_index(["agent_id", "scene_ts"], inplace=True)
