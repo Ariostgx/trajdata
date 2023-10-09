@@ -1,3 +1,4 @@
+import json
 import gc
 import random
 import time
@@ -49,7 +50,7 @@ from trajdata.data_structures import (
 from trajdata.dataset_specific import RawDataset
 from trajdata.maps.map_api import MapAPI
 from trajdata.parallel import ParallelDatasetPreprocessor, scene_paths_collate_fn
-from trajdata.utils import agent_utils, env_utils, scene_utils, string_utils
+from trajdata.utils import agent_utils, env_utils, scene_utils, py_utils, string_utils
 from trajdata.utils.parallel_utils import parallel_iapply
 
 # TODO(bivanovic): Move this to a better place in the codebase.
@@ -111,6 +112,7 @@ class UnifiedDataset(Dataset):
         cache_location: str = "~/.unified_data_cache",
         rebuild_cache: bool = False,
         rebuild_maps: bool = False,
+        save_index: bool = False,
         num_workers: int = 0,
         verbose: bool = False,
         extras: Dict[str, Callable[..., np.ndarray]] = dict(),
@@ -158,6 +160,11 @@ class UnifiedDataset(Dataset):
             transforms (Iterable[Callable], optional): Allows for custom modifications of batch elements. Each Callable must take in a filled {Agent,Scene}BatchElement and return a {Agent,Scene}BatchElement.
             rank (int, optional): Proccess rank when using torch DistributedDataParallel for multi-GPU training. Only the rank 0 process will be used for caching.
         """
+        self.desired_data: List[str] = desired_data
+        self.scene_description_contains: Optional[
+            List[str]
+        ] = scene_description_contains
+
         self.centric: str = centric
         self.desired_dt: float = desired_dt
 
@@ -346,7 +353,11 @@ class UnifiedDataset(Dataset):
         data_index: Union[
             List[Tuple[str, int, np.ndarray]],
             List[Tuple[str, int, List[Tuple[str, np.ndarray]]]],
-        ] = self.get_data_index(num_workers, scene_paths)
+        ]
+        if self._index_cache_path().exists():
+            data_index = self._load_data_index()
+        else:
+            data_index = self.get_data_index(num_workers, scene_paths)
 
         # Done with this list. Cutting memory usage because
         # of multiprocessing later on.
@@ -363,8 +374,94 @@ class UnifiedDataset(Dataset):
         )
         self._data_len: int = len(self._data_index)
 
-        self._cached_batch_elements = None
+        # Use only rank 0 process for caching when using multi-GPU torch training.
+        if save_index and rank == 0:
+            if self._index_cache_path().exists():
+                print(
+                    "data index already-cached, igore save_index == True).",
+                    flush=True,
+                )
+            else:
+                self._cache_data_index(data_index)
 
+        self._cached_batch_elements = None
+    def _index_cache_path(
+        self, ret_args: bool = False
+    ) -> Union[Path, Tuple[Path, Dict[str, Any]]]:
+        # Whichever UnifiedDataset arguments affect data indexing are captured
+        # and hashed together here.
+        impactful_args: Dict[str, Any] = {
+            "desired_data": tuple(self.desired_data),
+            "scene_description_contains": tuple(self.scene_description_contains)
+            if self.scene_description_contains is not None
+            else None,
+            "centric": self.centric,
+            "desired_dt": self.desired_dt,
+            "history_sec": self.history_sec,
+            "future_sec": self.future_sec,
+            "incl_robot_future": self.incl_robot_future,
+            "only_types": tuple(t.name for t in self.only_types)
+            if self.only_types is not None
+            else None,
+            "only_predict": tuple(t.name for t in self.only_predict)
+            if self.only_predict is not None
+            else None,
+            "no_types": tuple(t.name for t in self.no_types)
+            if self.no_types is not None
+            else None,
+            "ego_only": self.ego_only,
+        }
+        index_hash: str = py_utils.hash_dict(impactful_args)
+        index_cache_path: Path = self.cache_path / "data_indexes" / index_hash
+
+        if ret_args:
+            return index_cache_path, impactful_args
+        else:
+            return index_cache_path
+
+    def _cache_data_index(
+        self,
+        data_index: Union[
+            List[Tuple[str, int, np.ndarray]],
+            List[Tuple[str, int, List[Tuple[str, np.ndarray]]]],
+        ],
+    ) -> None:
+        index_cache_dir, index_args = self._index_cache_path(ret_args=True)
+
+        # Create it if it doesn't exist yet.
+        index_cache_dir.mkdir(parents=True, exist_ok=True)
+
+        index_cache_file: Path = index_cache_dir / "data_index.dill"
+        with open(index_cache_file, "wb") as f:
+            dill.dump(data_index, f)
+
+        args_file: Path = index_cache_dir / "index_args.json"
+        with open(args_file, "w") as f:
+            json.dump(index_args, f, indent=4)
+
+        print(
+            f"Cached data index to {str(index_cache_file)}",
+            flush=True,
+        )
+
+    def _load_data_index(
+        self,
+    ) -> Union[
+        List[Tuple[str, int, np.ndarray]],
+        List[Tuple[str, int, List[Tuple[str, np.ndarray]]]],
+    ]:
+        index_cache_file: Path = self._index_cache_path() / "data_index.dill"
+        with open(index_cache_file, "rb") as f:
+            data_index = dill.load(f)
+
+        if self.verbose:
+            print(
+                f"Loaded data index from {str(index_cache_file)}",
+                flush=True,
+            )
+
+        return data_index
+    
     def load_or_create_cache(
         self, cache_path: str, num_workers=0, filter_fn=None
     ) -> None:
