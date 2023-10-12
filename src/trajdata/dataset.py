@@ -385,6 +385,7 @@ class UnifiedDataset(Dataset):
                 self._cache_data_index(data_index)
 
         self._cached_batch_elements = None
+    
     def _index_cache_path(
         self, ret_args: bool = False
     ) -> Union[Path, Tuple[Path, Dict[str, Any]]]:

@@ -393,6 +393,7 @@ def plot_scene_batch(
     show: bool = True,
     legend: bool = True,
     close: bool = True,
+    controlled_names: Optional[str] = None,
 ) -> None:
     if ax is None:
         _, ax = plt.subplots()
@@ -423,9 +424,17 @@ def plot_scene_batch(
     agent_type = batch.agent_type[batch_idx]
     agent_extent = batch.agent_hist_extent[batch_idx, :, -1]
     agent_fut = batch.agent_fut[batch_idx]
+    palette = sns.color_palette("husl", 4)
 
     for agent_id in range(num_agents):
-        color = colors[agent_id % len(colors)]
+        # color = colors[agent_id % len(colors)]
+    
+        if controlled_names is not None and batch.agent_names[batch_idx][agent_id] in controlled_names:
+            color = palette[0]
+            alpha = 1.0
+        else:
+            color = 'olive'
+            alpha = 0.7
 
         ax.plot(
             agent_hist.get_attr("x")[agent_id],
@@ -441,10 +450,10 @@ def plot_scene_batch(
             agent_hist[agent_id, -1],
             agent_extent[agent_id],
             base_frame_from_agent_tf,
-            # facecolor=color,
-            facecolor='olive',
+            facecolor=color,
+            # facecolor='olive',
             edgecolor="k",
-            alpha=0.7,
+            alpha=alpha,
             label="Agent Current" if agent_id == 0 else None,
         )
         ax.plot(
