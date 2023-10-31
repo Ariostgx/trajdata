@@ -186,6 +186,7 @@ class SceneBatch:
     scene_ids: Optional[List]
     history_pad_dir: PadDirection
     extras: Dict[str, Tensor]
+    tgt_agent_idxs: Optional[List]
 
     def to(self, device) -> None:
         excl_vals = {
@@ -283,6 +284,7 @@ class SceneBatch:
                 key: _filter_tensor_or_list(val, filter_mask)
                 for key, val in self.extras.items()
             },
+            tgt_agent_idxs=_filter_tensor_or_list(self.tgt_agent_idxs)
         )
 
     def to_agent_batch(self, agent_inds: torch.Tensor) -> AgentBatch:

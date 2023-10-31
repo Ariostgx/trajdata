@@ -56,7 +56,6 @@ from trajdata.utils.parallel_utils import parallel_iapply
 # TODO(bivanovic): Move this to a better place in the codebase.
 DEFAULT_PX_PER_M: Final[float] = 2.0
 
-
 class UnifiedDataset(Dataset):
     # @profile
     def __init__(

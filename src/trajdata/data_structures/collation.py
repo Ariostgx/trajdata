@@ -977,6 +977,8 @@ def scene_collate_fn(
     agent_names = [batch_elem.agent_names for batch_elem in batch_elems]
 
     scene_ids = [batch_elem.scene_id for batch_elem in batch_elems]
+    
+    tgt_agent_idxs = [batch_elem.tgt_agent_idx for batch_elem in batch_elems]
 
     extras: Dict[str, Tensor] = {}
     for key in batch_elems[0].extras.keys():
@@ -1010,6 +1012,7 @@ def scene_collate_fn(
         scene_ids=scene_ids,
         history_pad_dir=history_pad_dir,
         extras=extras,
+        tgt_agent_idxs=tgt_agent_idxs,
     )
 
     if batch_augments:
