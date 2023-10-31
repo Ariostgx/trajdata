@@ -196,6 +196,7 @@ class SceneBatch:
             "history_pad_dir",
             "scene_ids",
             "extras",
+            "tgt_agent_idxs",
         }
 
         for val in vars(self).keys():
