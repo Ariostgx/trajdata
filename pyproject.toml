@@ -12,9 +12,9 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "License :: OSI Approved :: Apache Software License",
 ]
-dynamic = "license"
 name = "trajdata"
 version = "1.3.3"
+dynamic = ["license"]
 authors = [{ name = "Boris Ivanovic", email = "bivanovic@nvidia.com" }]
 description = "A unified interface to many trajectory forecasting datasets."
 readme = "README.md"
