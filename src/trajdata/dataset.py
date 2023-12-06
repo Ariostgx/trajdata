@@ -119,6 +119,7 @@ class UnifiedDataset(Dataset):
             Callable[..., Union[AgentBatchElement, SceneBatchElement]]
         ] = (),
         rank: int = 0,
+        use_all_agents: bool = False,
     ) -> None:
         """Instantiates a PyTorch Dataset object which aggregates data
         from multiple trajectory forecasting datasets.
@@ -158,6 +159,7 @@ class UnifiedDataset(Dataset):
             extras (Dict[str, Callable[..., np.ndarray]], optional): Adds extra data to each batch element. Each Callable must take as input a filled {Agent,Scene}BatchElement and return an ndarray which will subsequently be added to the batch element's `extra` dict.
             transforms (Iterable[Callable], optional): Allows for custom modifications of batch elements. Each Callable must take in a filled {Agent,Scene}BatchElement and return a {Agent,Scene}BatchElement.
             rank (int, optional): Proccess rank when using torch DistributedDataParallel for multi-GPU training. Only the rank 0 process will be used for caching.
+            use_all_agents (bool, optional): If True, use all agents in the scene for scene-centric batching. If False, only use agents in the first frame of the scene_ts. Defaults to False.
         """
         self.desired_data: List[str] = desired_data
         self.scene_description_contains: Optional[
@@ -230,6 +232,7 @@ class UnifiedDataset(Dataset):
         self.rank = rank
         self.max_neighbor_num = max_neighbor_num
         self.ego_only = ego_only
+        self.use_all_agents = use_all_agents
 
         # Create requested state types now so pickling works
         # (Needed for multiprocess dataloading)
@@ -1047,6 +1050,9 @@ class UnifiedDataset(Dataset):
                 self.standardize_data,
                 self.standardize_derivatives,
                 self.max_agent_num,
+                self.use_all_agents,
+                self.only_types,
+                self.no_types,
             )
         elif self.centric == "agent":
             scene_time_agent: SceneTimeAgent = SceneTimeAgent.from_cache(

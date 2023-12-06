@@ -777,6 +777,22 @@ def split_pad_crop(
 
     return x
 
+def pad_sequence_both_ends(tensor_list, left_pad_idx, padding_value=np.nan):
+    T = max([t.shape[0] for t in tensor_list])
+    
+    padded_tensor_list = []
+    for idx, t in enumerate(tensor_list):
+        pad_left = left_pad_idx[idx]
+        pad_right = T - t.shape[0] - pad_left
+        padded_tensor_list.append(
+            F.pad(
+                t,
+                (0, 0, pad_left, pad_right),
+                value=padding_value,
+            )
+        )
+
+    return torch.stack(padded_tensor_list, dim=0)
 
 def scene_collate_fn(
     batch_elems: List[SceneBatchElement],
@@ -881,22 +897,24 @@ def scene_collate_fn(
         agents_history_extents.append(padded_agents_history_extents)
 
         # Future
-        padded_agents_futures = pad_sequence(
+        padded_agents_futures = pad_sequence_both_ends(
             [
                 torch.as_tensor(nh, dtype=torch.float)
                 for nh in elem.agent_futures[:max_agent_num]
             ],
-            batch_first=True,
+            left_pad_idx=elem.agent_future_start_idx_np,
             padding_value=np.nan,
         )
-        padded_agents_future_extents = pad_sequence(
+
+        padded_agents_future_extents = pad_sequence_both_ends(
             [
                 torch.as_tensor(nh, dtype=torch.float)
-                for nh in elem.agent_future_extents
+                for nh in elem.agent_future_extents[:max_agent_num]
             ],
-            batch_first=True,
+            left_pad_idx=elem.agent_future_start_idx_np,
             padding_value=np.nan,
         )
+        
         if padded_agents_futures.shape[-2] < max_future_len:
             to_add = max_future_len - padded_agents_futures.shape[-2]
             padded_agents_futures = F.pad(

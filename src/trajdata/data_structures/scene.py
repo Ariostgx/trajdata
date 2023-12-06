@@ -9,6 +9,8 @@ from trajdata.data_structures.agent import Agent, AgentMetadata, AgentType
 from trajdata.data_structures.scene_metadata import Scene
 from trajdata.data_structures.state import StateArray
 
+from decimal import Decimal
+from math import ceil, floor
 
 class SceneTime:
     """Holds the data for a particular scene at a particular timestep."""
@@ -49,6 +51,23 @@ class SceneTime:
 
         return np.linalg.norm(nb_pos - agent_pos, axis=1)
 
+    def get_all_future_agents(self, future_sec, only_types, no_types):
+        future_ts: int = floor(Decimal(str(future_sec[1])) / Decimal(str(self.scene.dt)))
+        
+        future_agents = []
+        future_agents += self.agents
+
+        for i in range(future_ts):
+            agents_present: List[AgentMetadata] = self.scene.agent_presence[self.ts + i + 1]
+            filtered_agents: List[AgentMetadata] = filtering.agent_types(
+                agents_present, no_types, only_types
+            )
+
+            for agent in filtered_agents:
+                if agent not in future_agents:
+                    future_agents.append(agent)
+
+        return future_agents
 
 class SceneTimeAgent:
     """Holds the data for a particular agent in a scene at a particular timestep."""

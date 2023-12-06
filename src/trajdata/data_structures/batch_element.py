@@ -337,6 +337,9 @@ class SceneBatchElement:
         standardize_data: bool = False,
         standardize_derivatives: bool = False,
         max_agent_num: Optional[int] = None,
+        use_all_agents: bool = False,
+        only_types: Optional[List[AgentType]] = None,
+        no_types: Optional[List[AgentType]] = None,
     ) -> None:
         self.cache: SceneCache = cache
         self.data_index = data_index
@@ -346,7 +349,12 @@ class SceneBatchElement:
         if max_agent_num is not None:
             scene_time.agents = scene_time.agents[:max_agent_num]
 
-        self.agents: List[AgentMetadata] = scene_time.agents
+        if use_all_agents:
+            self.agents: List[AgentMetadata] = scene_time.get_all_future_agents(future_sec, only_types, no_types)
+            # use the scene_time agents as the target agents
+            self.tgt_agent_idx = [self.agents.index(agent) for agent in scene_time.agents]
+        else:
+            self.agents: List[AgentMetadata] = scene_time.agents
 
         robot = [agent for agent in self.agents if agent.name == "ego"]
         if len(robot) > 0:
@@ -402,9 +410,15 @@ class SceneBatchElement:
                 ]
             )
 
-        nearby_agents, self.agent_types_np = self.get_nearby_agents(
-            scene_time, self.centered_agent, distance_limit
-        )
+        if use_all_agents:
+            # (TODO-shuhan): when using all agents, don't use distance_limit
+            nearby_agents = self.agents
+            self.agent_types_np = np.array([a.type.value for a in self.agents])
+        else:
+            nearby_agents, self.agent_types_np = self.get_nearby_agents(
+                scene_time, self.centered_agent, distance_limit
+            )
+            self.tgt_agent_idx = [self.agents.index(agent) for agent in nearby_agents]
 
         self.num_agents = len(nearby_agents)
         self.agent_names = [agent.name for agent in nearby_agents]
@@ -417,6 +431,7 @@ class SceneBatchElement:
             self.agent_futures,
             self.agent_future_extents,
             self.agent_future_lens_np,
+            self.agent_future_start_idx_np,
         ) = self.get_agents_future(future_sec, nearby_agents)
 
         self.agent_meta_dicts = [
@@ -428,6 +443,10 @@ class SceneBatchElement:
         self.map_patches: Optional[RasterizedMapPatch] = None
 
         map_name: str = f"{scene_time.scene.env_name}:{scene_time.scene.location}"
+        
+        # disable raster_map if use_all_agents is True
+        # because some agent_histories could be empty
+        # if not use_all_agents:
         if incl_raster_map:
             self.map_name = map_name
             self.map_patches = self.get_agents_map_patch(
@@ -506,18 +525,20 @@ class SceneBatchElement:
         self,
         future_sec: Tuple[Optional[float], Optional[float]],
         nearby_agents: List[AgentMetadata],
-    ) -> Tuple[List[StateArray], List[np.ndarray], np.ndarray]:
+    ) -> Tuple[List[StateArray], List[np.ndarray], np.ndarray, np.ndarray]:
 
         (
             agent_futures,
             agent_future_extents,
             agent_future_lens_np,
+            agent_future_start_idx_np,
         ) = self.cache.get_agents_future(self.scene_ts, nearby_agents, future_sec)
 
         return (
             agent_futures,
             agent_future_extents,
             agent_future_lens_np,
+            agent_future_start_idx_np
         )
 
     def get_agents_map_patch(
@@ -531,7 +552,16 @@ class SceneBatchElement:
 
         map_patches = list()
 
-        curr_state = [state[-1] for state in agent_histories]
+        # curr_state = [state[-1] for state in agent_histories]
+
+        # in case agent_histories is empty, we use the first agent_history_state
+        curr_state = []
+        for state in agent_histories:
+            if len(state) > 0:
+                curr_state.append(state[-1])
+            else:
+                curr_state.append(agent_histories[0][-1])
+
         curr_state = np.stack(curr_state).view(self.cache.obs_type)
 
         if self.standardize_data:

@@ -520,9 +520,21 @@ class DataFrameCache(SceneCache):
             ],
             dtype=int,
         )
+
+        # for agents that are not present in the scene at scene_ts, we use their first timesteps
+        last_timesteps = np.maximum(scene_ts, first_timesteps)
+
         last_index_incl: np.ndarray = np.array(
-            [self.index_dict[(agent.name, scene_ts)] for agent in agents], dtype=int
+            [
+                self.index_dict[(agent.name, last_timesteps[idx])]
+                for idx, agent in enumerate(agents)
+            ],
+            dtype=int,
         )
+
+        # force empty history for agents that are not present in the scene at scene_ts
+        empty_mask = last_timesteps > scene_ts
+        last_index_incl[empty_mask] = first_index_incl[empty_mask] - 1
 
         concat_idxs = arr_utils.vrange(first_index_incl, last_index_incl + 1)
         neighbor_data_df: pd.DataFrame = self.scene_data_df.iloc[concat_idxs, :]
@@ -565,9 +577,15 @@ class DataFrameCache(SceneCache):
         agents: List[AgentMetadata],
         future_sec: Tuple[Optional[float], Optional[float]],
     ) -> Tuple[List[StateArray], List[np.ndarray], np.ndarray]:
+        
         last_timesteps = np.array([agent.last_timestep for agent in agents], dtype=int)
+        first_timesteps = np.array([agent.first_timestep for agent in agents], dtype=int)
 
-        first_timesteps = np.minimum(scene_ts + 1, last_timesteps)
+        first_timesteps = np.maximum(scene_ts + 1, first_timesteps)
+        first_timesteps = np.minimum(first_timesteps, last_timesteps)
+
+        # record the left padding length for each agent
+        neighbor_future_start_idx_np: np.ndarray = np.array(first_timesteps - scene_ts - 1, dtype=int)
 
         if future_sec[1] is not None:
             # Wrapping the input floats with Decimal for exact division
@@ -623,6 +641,7 @@ class DataFrameCache(SceneCache):
             neighbor_futures,
             neighbor_extents,
             neighbor_future_lens_np,
+            neighbor_future_start_idx_np,
         )
 
     # TRAFFIC LIGHT INFO
