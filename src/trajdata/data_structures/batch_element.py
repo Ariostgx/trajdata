@@ -247,6 +247,7 @@ class AgentBatchElement:
             neighbor_data,
             neighbor_extents_data,
             neighbor_data_lens_np,
+            _, # neighbor_future_start_idx_np
         ) = self.cache.get_agents_future(self.scene_ts, nearby_agents, future_sec)
         return (
             neighbor_data,
