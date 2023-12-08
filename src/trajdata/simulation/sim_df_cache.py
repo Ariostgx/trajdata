@@ -73,6 +73,7 @@ class SimulationDataFrameCache(DataFrameCache, SimulationCache):
                 [np.zeros((0, self.obs_dim)) for agent in agents],
                 [np.zeros((0, 3)) for agent in agents],  # 3 = Extent size.
                 np.zeros_like(last_timesteps),
+                np.zeros_like(last_timesteps),
             )
 
         return super().get_agents_future(scene_ts, agents, future_sec)
