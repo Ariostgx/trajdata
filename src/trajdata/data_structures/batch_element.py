@@ -439,6 +439,8 @@ class SceneBatchElement:
             get_agent_meta_dict(self.cache, agent) for agent in nearby_agents
         ]
 
+        self.tgt_agent_idx = [idx for idx in self.tgt_agent_idx if self.agent_future_lens_np[idx] > 0]
+
         ### MAP ###
         self.map_name: Optional[str] = None
         self.map_patches: Optional[RasterizedMapPatch] = None

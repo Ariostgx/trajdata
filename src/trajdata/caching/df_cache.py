@@ -584,9 +584,6 @@ class DataFrameCache(SceneCache):
         first_timesteps = np.maximum(scene_ts + 1, first_timesteps)
         first_timesteps = np.minimum(first_timesteps, last_timesteps)
 
-        # record the left padding length for each agent
-        neighbor_future_start_idx_np: np.ndarray = np.array(first_timesteps - scene_ts - 1, dtype=int)
-
         if future_sec[1] is not None:
             # Wrapping the input floats with Decimal for exact division
             # (avoiding float roundoff errors).
@@ -607,6 +604,13 @@ class DataFrameCache(SceneCache):
             ],
             dtype=int,
         )
+
+        # record the left padding length for each agent
+        neighbor_future_start_idx_np: np.ndarray = np.array(first_timesteps - scene_ts - 1, dtype=int)
+
+        empty_mask = last_timesteps < scene_ts + 1
+        last_index_incl[empty_mask] = first_index_incl[empty_mask] - 1
+        neighbor_future_start_idx_np[empty_mask] = 0
 
         concat_idxs = arr_utils.vrange(first_index_incl, last_index_incl + 1)
         neighbor_data_df: pd.DataFrame = self.scene_data_df.iloc[concat_idxs, :]
