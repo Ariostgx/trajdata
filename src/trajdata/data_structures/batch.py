@@ -314,6 +314,12 @@ class SceneBatch:
             if xlist is not None
             else None
         )
+        index_neighbors_list = (
+            lambda xlist: 
+                [ [x for x, ind in zip(xlist[i], torch.arange(num_agents)) if ind != agent_inds[i]] for i in range(batch_size)]
+            if xlist is not None
+            else None
+        )
         index_neighbors = lambda x: x[others_mask].reshape(
             [
                 batch_size,
@@ -347,11 +353,12 @@ class SceneBatch:
             robot_fut_len=self.robot_fut_len,
             map_names=index_agent_list(self.map_names),
             maps=index_agent(self.maps),
-            vector_maps=index_agent(self.vector_maps),
-            maps_resolution=index_agent(self.maps_resolution),
-            rasters_from_world_tf=index_agent(self.rasters_from_world_tf),
+            vector_maps=self.vector_maps,
+            maps_resolution=self.maps_resolution,
+            rasters_from_world_tf=self.rasters_from_world_tf,
             agents_from_world_tf=self.centered_agent_from_world_tf,
             scene_ids=self.scene_ids,
             history_pad_dir=self.history_pad_dir,
             extras=self.extras,
+            neigh_names=index_neighbors_list(self.agent_names),
         )
