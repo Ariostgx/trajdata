@@ -794,9 +794,6 @@ class DataFrameCache(SceneCache):
         )
 
         pbar_kwargs = {"position": 2, "leave": False, "disable": True}
-        rasterized_map: RasterizedMap = raster_utils.rasterize_map(
-            vector_map, raster_resolution, **pbar_kwargs
-        )
 
         vector_map.compute_search_indices()
 
@@ -811,12 +808,20 @@ class DataFrameCache(SceneCache):
         with open(kdtrees_path, "wb") as f:
             dill.dump(vector_map.search_kdtrees, f)
 
-        # Saving the rasterized map data.
-        zarr.save(raster_map_path, rasterized_map.data)
+        try:
+            rasterized_map: RasterizedMap = raster_utils.rasterize_map(
+                vector_map, raster_resolution, **pbar_kwargs
+            )
+            # Saving the rasterized map data.
+            zarr.save(raster_map_path, rasterized_map.data)
 
-        # Saving the rasterized map metadata.
-        with open(raster_metadata_path, "wb") as f:
-            dill.dump(rasterized_map.metadata, f)
+            # Saving the rasterized map metadata.
+            with open(raster_metadata_path, "wb") as f:
+                dill.dump(rasterized_map.metadata, f)
+        except Exception as e:
+            # do not save the rasterized map if failed
+            print(f"Failed to rasterize map {maps_path}: {e}")
+
 
     def pad_map_patch(
         self,
