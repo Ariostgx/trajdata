@@ -795,18 +795,22 @@ class DataFrameCache(SceneCache):
 
         pbar_kwargs = {"position": 2, "leave": False, "disable": True}
 
-        vector_map.compute_search_indices()
-
         # Ensuring the maps directory exists.
         maps_path.mkdir(parents=True, exist_ok=True)
 
-        # Saving the vectorized map data.
-        with open(vector_map_path, "wb") as f:
-            f.write(vector_map.to_proto().SerializeToString())
+        try:
+            vector_map.compute_search_indices()
 
-        # Saving precomputed map element kdtrees.
-        with open(kdtrees_path, "wb") as f:
-            dill.dump(vector_map.search_kdtrees, f)
+            # Saving the vectorized map data.
+            with open(vector_map_path, "wb") as f:
+                f.write(vector_map.to_proto().SerializeToString())
+
+            # Saving precomputed map element kdtrees.
+            with open(kdtrees_path, "wb") as f:
+                dill.dump(vector_map.search_kdtrees, f)
+        except Exception as e:
+            # do not save the vectorized map if failed
+            print(f"Failed to vectorize map {maps_path}: {e}")
 
         try:
             rasterized_map: RasterizedMap = raster_utils.rasterize_map(
