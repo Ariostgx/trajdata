@@ -289,16 +289,19 @@ class DataFrameCache(SceneCache):
             # we know obs is "x,y,z,xd,yd,xdd,ydd,h"
             obs = obs - self._obs_frame
             # batch rotate vectors
-            # obs[..., (0, 1, 3, 4, 5, 6)] = (
-            #     obs[..., (0, 1, 3, 4, 5, 6)].reshape(-1, 3, 2)
-            #     @ self._obs_rot_mat.T[None, :, :]
-            # ).reshape(*batch_dims, 6)
+
+            # do not rotate velocity for nuplan
+            if 'nuplan' in self.scene.env_name:
+                obs[..., (0, 1)] = (
+                    obs[..., (0, 1)].reshape(-1, 1, 2)
+                @ self._obs_rot_mat.T[None, :, :]
+                ).reshape(*batch_dims, 2)
+            else:
+                obs[..., (0, 1, 3, 4, 5, 6)] = (
+                    obs[..., (0, 1, 3, 4, 5, 6)].reshape(-1, 3, 2)
+                    @ self._obs_rot_mat.T[None, :, :]
+                ).reshape(*batch_dims, 6)
             
-            # TODO: not transforming velocity and acceleration for nuPlan
-            obs[..., (0, 1)] = (
-                obs[..., (0, 1)].reshape(-1, 1, 2)
-            @ self._obs_rot_mat.T[None, :, :]
-            ).reshape(*batch_dims, 2)
 
         obs = obs.view(RawStateArray)
         if self._obs_format is not None:
@@ -313,11 +316,12 @@ class DataFrameCache(SceneCache):
         if len(state.shape) == 1:
             state = state[np.newaxis, :]
 
-        if self._transf_mean is not None:
+        if  hasattr(self, "_transf_mean") and self._transf_mean is not None:
             state -= self._transf_mean[col_idxs]
 
         if (
-            self._transf_rotmat is not None
+            hasattr(self, "_transf_rotmat")
+            and self._transf_rotmat is not None
             and col_idxs[0] in self.pos_cols + self.vel_cols + self.acc_cols
         ):
             state = state @ self._transf_rotmat

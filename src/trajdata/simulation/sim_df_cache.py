@@ -141,7 +141,10 @@ class SimulationDataFrameCache(DataFrameCache, SimulationCache):
                         sim_dict[attr].append(agent_data[attr])
                     if self.extent_cols:
                         for attr in ['length', 'width', 'height']:
-                            sim_dict[attr].append(self.get_value(agent, self.scene_ts - 1, attr))
+                            sim_dict[attr].append(agent_data[attr])
+                            # TODO (shuhan): check the difference here
+                            
+                            # sim_dict[attr].append(self.get_value(agent, self.scene_ts - 1, attr))
                     # otherwise drop this agent
 
         sim_step_df = pd.DataFrame(sim_dict)

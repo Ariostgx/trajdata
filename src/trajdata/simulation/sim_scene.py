@@ -127,7 +127,7 @@ class SimulationScene:
             return self.get_obs()
 
     def get_obs(
-        self, collate: bool = True, get_map: bool = True, agent_names = None
+        self, collate: bool = True, get_raster_map: bool = False, agent_names = None, get_vector_map: bool = True,
     ) -> Union[AgentBatch, Dict[str, Any]]:
         agent_data_list: List[AgentBatchElement] = list()
         self.cache.set_obs_format(self.dataset.obs_format)
@@ -148,7 +148,7 @@ class SimulationScene:
                 future_sec=self.dataset.future_sec,
                 agent_interaction_distances=self.dataset.agent_interaction_distances,
                 incl_robot_future=False,
-                incl_raster_map=get_map and self.dataset.incl_raster_map,
+                incl_raster_map=get_raster_map and self.dataset.incl_raster_map,
                 raster_map_params=self.dataset.raster_map_params,
                 map_api=self.dataset._map_api,
                 vector_map_params=self.dataset.vector_map_params,
@@ -160,6 +160,9 @@ class SimulationScene:
             agent_data_list.append(batch_element)
 
             for key, extra_fn in self.dataset.extras.items():
+                if not get_vector_map and key == "vector_lane":
+                    continue
+
                 batch_element.extras[key] = extra_fn(batch_element)
 
             for transform_fn in self.dataset.transforms:
