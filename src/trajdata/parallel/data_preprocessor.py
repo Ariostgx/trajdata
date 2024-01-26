@@ -92,14 +92,19 @@ class ParallelDatasetPreprocessor(Dataset):
         if 'nuplan' not in env_name:
             raw_dataset.load_dataset_obj(verbose=False)
 
-        scene: Scene = agent_utils.get_agent_data(
-            scene_info,
-            raw_dataset,
-            env_cache,
-            self.rebuild_cache,
-            self.cache_class,
-            self.desired_dt,
-        )
+        try:
+            scene: Scene = agent_utils.get_agent_data(
+                scene_info,
+                raw_dataset,
+                env_cache,
+                self.rebuild_cache,
+                self.cache_class,
+                self.desired_dt,
+            )
+        except ValueError as e:
+            print(f"Process {os.getpid()}: {scene_name} failed with error: {e}")
+            return None
+
         if 'nuplan' not in env_name:
             raw_dataset.del_dataset_obj()
 
