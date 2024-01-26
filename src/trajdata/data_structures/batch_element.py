@@ -352,7 +352,9 @@ class SceneBatchElement:
 
         if use_all_agents:
             self.agents: List[AgentMetadata] = scene_time.get_all_future_agents(future_sec, only_types, no_types)
+            
             # use the scene_time agents as the target agents
+            # this is to remove agents that do not appear in the first frame
             self.tgt_agent_idx = [self.agents.index(agent) for agent in scene_time.agents]
         else:
             self.agents: List[AgentMetadata] = scene_time.agents
@@ -439,7 +441,8 @@ class SceneBatchElement:
             get_agent_meta_dict(self.cache, agent) for agent in nearby_agents
         ]
 
-        self.tgt_agent_idx = [idx for idx in self.tgt_agent_idx if self.agent_future_lens_np[idx] > 0]
+        # note: for rollout, this will remove the agents that only appear before the first step
+        # self.tgt_agent_idx = [idx for idx in self.tgt_agent_idx if self.agent_future_lens_np[idx] > 0]
 
         ### MAP ###
         self.map_name: Optional[str] = None
