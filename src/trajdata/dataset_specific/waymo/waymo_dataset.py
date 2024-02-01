@@ -338,8 +338,20 @@ class WaymoDataset(RawDataset):
         map_cache_class: Type[SceneCache],
         map_params: Dict[str, Any],
     ):
+        # check if map is already cached
+        file_name = self.dataset_obj.get_filename(data_idx)
+        scene_id = file_name.name.split('.')[0].split('_')[-1]
+        map_file = Path(f"{self.name}_{scene_id}.pb")
+        map_path = cache_path / f"{self.name}/maps" / map_file
+
+        if map_path.exists():
+            print(f"Map {map_path} already cached, skipping...", flush=True)
+            return
+        else:
+            print(f"Caching map {map_path}...", flush=True)
+
         dataset = tf.data.TFRecordDataset(
-            [self.dataset_obj.get_filename(data_idx)], compression_type=""
+            [file_name], compression_type=""
         )
 
         scenario: Scenario = Scenario()
@@ -362,6 +374,7 @@ class WaymoDataset(RawDataset):
     ) -> None:
         num_workers: int = map_params.get("num_workers", 0)
         if num_workers > 1:
+            print(f"Caching maps with {num_workers} workers...", flush=True)
             parallel_apply(
                 partial(
                     self.cache_map,
