@@ -373,6 +373,19 @@ class WaymoDataset(RawDataset):
         map_params: Dict[str, Any],
     ) -> None:
         num_workers: int = map_params.get("num_workers", 0)
+
+        map_template = Path(f"{self.name}_*.pb")
+        map_template = cache_path / f"{self.name}/maps" / map_template
+        map_files = list(map_template.parent.glob(map_template.name))
+
+        cached_map_ids = [int(f.name.split('.')[0].split('_')[-1]) for f in map_files]
+        all_map_ids = list(range(self.dataset_obj.num_scenarios))
+
+        uncached_map_ids = list(set(all_map_ids) - set(cached_map_ids))
+
+        print(f"Found {len(cached_map_ids)} cached maps...", flush=True)
+        print(f"Found {len(uncached_map_ids)} uncached maps...", flush=True)
+
         if num_workers > 1:
             print(f"Caching maps with {num_workers} workers...", flush=True)
             parallel_apply(
@@ -382,10 +395,10 @@ class WaymoDataset(RawDataset):
                     map_cache_class=map_cache_class,
                     map_params=map_params,
                 ),
-                range(self.dataset_obj.num_scenarios),
+                uncached_map_ids,
                 num_workers=num_workers,
             )
 
         else:
-            for i in tqdm.trange(self.dataset_obj.num_scenarios):
+            for i in tqdm.tqdm(uncached_map_ids, desc="Caching maps"):
                 self.cache_map(i, cache_path, map_cache_class, map_params)
