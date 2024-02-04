@@ -74,8 +74,13 @@ class EnvCache:
     ) -> None:
         env_cache_dir: Path = self.path / env_name
         env_cache_dir.mkdir(parents=True, exist_ok=True)
-        with open(env_cache_dir / "scenes_list.dill", "wb") as f:
-            dill.dump(scenes_list, f)
+
+        # to avoid conflict loading the same file from different processes
+        if not (env_cache_dir / "scenes_list.dill").exists():
+            with open(env_cache_dir / "scenes_list.dill", "wb") as f:
+                dill.dump(scenes_list, f)
+        else:
+            print(f"Scenes list for {env_name} already exists in cache", flush=True)
 
     @staticmethod
     def load(scene_info_path: Union[Path, str]) -> Scene:

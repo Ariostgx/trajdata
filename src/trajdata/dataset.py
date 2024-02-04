@@ -185,7 +185,7 @@ class UnifiedDataset(Dataset):
                 raster_map_params["map_size_px"] % 2 == 0
             ), "Patch parameter 'map_size_px' must be divisible by 2"
 
-        require_map_cache = require_map_cache or incl_raster_map
+        self.require_map_cache = require_map_cache or incl_raster_map
 
         self.history_sec = history_sec
         self.future_sec = future_sec
@@ -264,32 +264,13 @@ class UnifiedDataset(Dataset):
         for env in self.envs:
             if any(env.name in dataset_tuple for dataset_tuple in matching_datasets):
                 all_data_cached: bool = False
-                all_maps_cached: bool = not env.has_maps or not require_map_cache
+                all_maps_cached: bool = not env.has_maps or not self.require_map_cache
                 if self.env_cache.env_is_cached(env.name) and not self.rebuild_cache:
                     scenes_list: List[Scene] = self.get_desired_scenes_from_env(
                         matching_datasets, scene_description_contains, env
                     )
 
-                    all_data_cached: bool = all(
-                        self.env_cache.scene_is_cached(
-                            scene.env_name, scene.name, scene.dt
-                        )
-                        for scene in scenes_list
-                    )
-
-                    all_maps_cached: bool = (
-                        not env.has_maps
-                        or not require_map_cache
-                        or all(
-                            self.cache_class.is_map_cached(
-                                self.cache_path,
-                                env.name,
-                                scene.location,
-                                self.raster_map_params["px_per_m"],
-                            )
-                            for scene in scenes_list
-                        )
-                    )
+                    all_data_cached, all_maps_cached = self.check_cache_status(env, scenes_list)
 
                 if (
                     not all_data_cached
@@ -387,6 +368,30 @@ class UnifiedDataset(Dataset):
                 self._cache_data_index(data_index)
 
         self._cached_batch_elements = None
+
+    def check_cache_status(self, env, scenes_list):
+        all_data_cached: bool = all(
+                        self.env_cache.scene_is_cached(
+                            scene.env_name, scene.name, scene.dt
+                        )
+                        for scene in scenes_list
+                    )
+
+        all_maps_cached: bool = (
+                        not env.has_maps
+                        or not self.require_map_cache
+                        or all(
+                            self.cache_class.is_map_cached(
+                                self.cache_path,
+                                env.name,
+                                scene.location,
+                                self.raster_map_params["px_per_m"],
+                            )
+                            for scene in scenes_list
+                        )
+                    )
+        
+        return all_data_cached,all_maps_cached
     
     def _index_cache_path(
         self, ret_args: bool = False
