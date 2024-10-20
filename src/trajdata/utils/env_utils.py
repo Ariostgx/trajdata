@@ -41,6 +41,7 @@ except ModuleNotFoundError:
     # with the "trajdata[waymo]" option.
     pass
 
+from trajdata.dataset_specific.drivesim import DrivesimDataset
 
 def get_raw_dataset(dataset_name: str, data_dir: str) -> RawDataset:
     if "nusc" in dataset_name:
@@ -68,6 +69,11 @@ def get_raw_dataset(dataset_name: str, data_dir: str) -> RawDataset:
     if "interaction" in dataset_name:
         return InteractionDataset(
             dataset_name, data_dir, parallelizable=True, has_maps=True
+        )
+
+    if "drivesim" in dataset_name:
+        return DrivesimDataset(
+            dataset_name, data_dir, parallelizable=False, has_maps=False
         )
 
     raise ValueError(f"Dataset with name '{dataset_name}' is not supported")
